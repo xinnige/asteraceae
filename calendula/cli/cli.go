@@ -2,10 +2,14 @@ package cli
 
 import (
 	"flag"
-	"fmt"
 
 	"github.com/xinnige/asteraceae/calendula/awsapi"
 	"github.com/xinnige/asteraceae/calendula/utils"
+)
+
+const (
+	envToken    = "AUTH_TOKEN"
+	envEndpoint = "AUTH_ENDPOINT"
 )
 
 // CLI defines cli controller
@@ -21,10 +25,4 @@ func NewCLI() *CLI {
 	return &CLI{
 		AWSAPI: &awsapi.AWSAPI{},
 	}
-}
-
-// MethodHelp helps to print help messages
-func (cli *CLI) MethodHelp() {
-
-	fmt.Printf("Hello\n")
 }

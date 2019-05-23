@@ -1,7 +1,7 @@
 PKG_NAME:=.
 PKG_DIR:=$(PKG_NAME)
 
-CLI_NAME:=cli
+CLI_NAME:=auth0cli
 
 CLI_SRCS:= $(wildcard $(PKG_DIR)/awsapi/*.go) $(wildcard $(PKG_DIR)/mock/*.go) $(wildcard $(PKG_DIR)/api/*.go)
 
@@ -9,7 +9,7 @@ PWD = $(shell pwd)
 NAME:= $(notdir $(PWD))
 # ENV?= dev
 
-CLI_BIN:=./$(NAME)
+AUTH0_CLI_BIN:=./$(CLI_NAME)
 
 .PHONY: setup
 setup:
@@ -45,15 +45,14 @@ cover:
 	find . -name coverage.xml|xargs -n1 sed -i -e 's#/go/src#./#g'
 
 .PHONY: build
-build: $(CLI_BIN)
+build: $(AUTH0_CLI_BIN)
 
-$(CLI_BIN): $(CLI_SRCS)
-	go build -o $(CLI_BIN) $(PKG_DIR)/cmd/$(CLI_NAME)/main.go
+$(AUTH0_CLI_BIN): $(CLI_SRCS)
+	go build -o $(AUTH0_CLI_BIN) $(PKG_DIR)/cmd/$(CLI_NAME)/main.go
 
 .PHONY: clean
 clean:
 	find . -name debug.test | xargs rm -f
 	find . -name "coverage*" | xargs rm -f
 	find . -name "*.xml" | xargs rm -f
-	echo "" > cli.log
-	rm -f $(CLI_BIN)
+	rm -f $(AUTH0_CLI_BIN) cli.log

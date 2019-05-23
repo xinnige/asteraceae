@@ -38,6 +38,14 @@ type SerialInterface interface {
 	Unmarshal(data []byte, v interface{}) error
 }
 
+// ReadCloser mocks io.ReadCloser
+type ReadCloser struct {
+	io.Reader
+}
+
+// Close mocks io.Closer
+func (ReadCloser) Close() error { return nil }
+
 // CommonAPI defines a struct for io IOInterface
 type CommonAPI struct {
 }
@@ -92,7 +100,7 @@ func ReadFile(filename string) ([]byte, error) {
 func Marshal(v interface{}, siface SerialInterface) []byte {
 	bytes, err := siface.Marshal(v)
 	if err != nil {
-		log.Printf("Error: %v Marshal(%+v) error %#v", siface, v, err)
+		log.Printf("Error: %T Marshal(%+v) error %#v", siface, v, err)
 		return nil
 	}
 	return bytes
@@ -102,7 +110,7 @@ func Marshal(v interface{}, siface SerialInterface) []byte {
 func Unmarshal(data []byte, v interface{}, siface SerialInterface) error {
 	err := siface.Unmarshal(data, v)
 	if err != nil {
-		log.Printf("Error: %v Unmarshal(%+v) error %#v", siface, v, err)
+		log.Printf("Error: %T Unmarshal(%v) error %#v", siface, v, err)
 		return err
 	}
 	return nil
@@ -113,7 +121,7 @@ func MarshalIndent(
 	v interface{}, prefix string, indent string, siface SerialInterface) []byte {
 	bytes, err := siface.MarshalIndent(v, prefix, indent)
 	if err != nil {
-		log.Printf("Error: %v Marshal(%+v) error %#v", siface, v, err)
+		log.Printf("Error: %T Marshal(%+v) error %#v", siface, v, err)
 		return nil
 	}
 	return bytes

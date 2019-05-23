@@ -38,3 +38,4 @@ go/*
 *report.xml
 go.sum
 .python-version
+.env
