@@ -62,4 +62,5 @@ clean:
 	find . -name debug.test | xargs rm -f
 	find . -name "coverage*" | xargs rm -f
 	find . -name "*.xml" | xargs rm -f
-	rm -f $(AUTH0_CLI_BIN) $(SLACK_CLI_BIN) cli.log
+	find . -name "*.log" | xargs rm -f
+	rm -f $(AUTH0_CLI_BIN) $(SLACK_CLI_BIN)

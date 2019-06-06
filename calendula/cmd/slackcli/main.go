@@ -10,8 +10,12 @@ import (
 	cli "github.com/xinnige/asteraceae/calendula/cli"
 )
 
+const (
+	envDebug = "DEBUG"
+)
+
 func main() {
-	logfile, err := os.OpenFile("cli.log",
+	logfile, err := os.OpenFile("slack.log",
 		os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Printf("error opening file: %v", err)
@@ -23,10 +27,11 @@ func main() {
 		}
 	}()
 
-	log.SetOutput(logfile)
-	log.Printf("%s\n", time.Now())
+	logger := log.New(logfile, "", log.LstdFlags|log.Lshortfile)
+	logger.Printf("%s\n", time.Now())
 
 	client := cli.NewSlackCLI()
+	client.SetLogger(logger)
 	mapper := client.Commands()
 
 	if len(os.Args) == 1 || os.Args[1] == "-h" {

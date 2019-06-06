@@ -1,0 +1,58 @@
+{
+  "schemas": [
+    {
+      "type": "workspace",
+      "workspace": {
+        "id": "string",
+        "name": "string",
+        "domain": "string"
+      }
+    },
+    {
+      "type": "enterprise",
+      "enterprise": {
+        "id": "string",
+        "name": "string",
+        "domain": "string"
+      }
+    },
+    {
+      "type": "user",
+      "user": {
+        "id": "string",
+        "name": "string",
+        "email": "string"
+      }
+    },
+    {
+      "type": "file",
+      "file": {
+        "id": "string",
+        "name": "string",
+        "filetype": "string",
+        "title": "string"
+      }
+    },
+    {
+      "type": "channel",
+      "channel": {
+        "id": "string",
+        "name": "string",
+        "privacy": "string",
+        "is_shared": "bool",
+        "is_org_shared": "bool",
+        "teams_shared_with": "Optional: array<string>"
+      }
+    },
+    {
+      "type": "app",
+      "app": {
+        "id": "string",
+        "name": "string",
+        "is_distributed": "bool",
+        "is_directory_approved": "bool",
+        "scopes": "array"
+      }
+    }
+  ]
+}

@@ -29,6 +29,7 @@ go/*
 .DS_Store
 .package_template.*.yaml
 *.log
+.*
 *bak
 *crt
 *key

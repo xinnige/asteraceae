@@ -117,7 +117,12 @@ type AuditContext struct {
 
 // AuditLocation contains info of a location
 type AuditLocation struct {
-	Type   string `json:"type"`
+	Type string `json:"type"`
+	AuditDomain
+}
+
+// AuditDomain contains info of a domain (workspace/enterprise)
+type AuditDomain struct {
 	ID     string `json:"id"`
 	Name   string `json:"name"`
 	Domain string `json:"domain"`
@@ -137,7 +142,8 @@ type AuditLogPagination struct {
 	values       url.Values
 }
 
-func newAuditLogPagination(c *Client, options ...AuditLogsOption) (p AuditLogPagination) {
+func newAuditLogPagination(
+	c *Client, options ...AuditLogsOption) (p AuditLogPagination) {
 	p = AuditLogPagination{
 		c:     c,
 		limit: maxLimit, // per slack api documentation.
@@ -163,13 +169,36 @@ func (p AuditLogPagination) Failure(err error) error {
 	return err
 }
 
-func auditlogRequest(ctx context.Context, client *Client, path, token string, values url.Values) (*auditlogResponseFull, error) {
+func auditlogRequest(ctx context.Context, client *Client,
+	path, token string, values url.Values) (*auditlogResponseFull, error) {
 	response := &auditlogResponseFull{}
-	err := misc.GetJSON(ctx, client.client, AUDITURL+path, token, values, response, client.method, client)
+	err := misc.GetJSON(ctx, client.client, AUDITURL+path, token,
+		values, response, client.unmarshal, client)
 	if err != nil {
 		return nil, err
 	}
+	return response, nil
+}
 
+func auditActionRequest(ctx context.Context, client *Client,
+	path, token string) (*auditActionResponseFull, error) {
+	response := &auditActionResponseFull{}
+	err := misc.GetJSON(ctx, client.client, AUDITURL+path, token,
+		url.Values{}, response, client.unmarshal, client)
+	if err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
+func auditSchemaRequest(ctx context.Context, client *Client,
+	path, token string) (*auditSchemaResponseFull, error) {
+	response := &auditSchemaResponseFull{}
+	err := misc.GetJSON(ctx, client.client, AUDITURL+path, token,
+		url.Values{}, response, client.unmarshal, client)
+	if err != nil {
+		return nil, err
+	}
 	return response, nil
 }
 
@@ -193,7 +222,8 @@ func (p AuditLogPagination) setValues(values *url.Values) {
 }
 
 // Next iters paging of audit logs
-func (p AuditLogPagination) Next(ctx context.Context) (_ AuditLogPagination, err error) {
+func (p AuditLogPagination) Next(
+	ctx context.Context) (_ AuditLogPagination, err error) {
 	var (
 		resp *auditlogResponseFull
 	)
@@ -210,11 +240,13 @@ func (p AuditLogPagination) Next(ctx context.Context) (_ AuditLogPagination, err
 	}
 	p.setValues(&values)
 
-	if resp, err = auditlogRequest(ctx, p.c, "logs", p.c.token, values); err != nil {
+	if resp, err = auditlogRequest(
+		ctx, p.c, "logs", p.c.token, values); err != nil {
 		return p, err
 	}
 
-	p.c.Debugf("GetAuditLogs: got %d entries; metadata %v", len(resp.Entries), resp.Metadata)
+	p.c.Debugf("GetAuditLogs: got %d entries; metadata %v",
+		len(resp.Entries), resp.Metadata)
 	p.Entries = resp.Entries
 	p.previousResp = &resp.Metadata
 
@@ -223,12 +255,15 @@ func (p AuditLogPagination) Next(ctx context.Context) (_ AuditLogPagination, err
 
 // GetAuditLogsPaginated unarchives the given channel
 // see https://api.slack.com/methods/channels.unarchive
-func (client *Client) GetAuditLogsPaginated(options ...AuditLogsOption) AuditLogPagination {
+func (client *Client) GetAuditLogsPaginated(
+	options ...AuditLogsOption) AuditLogPagination {
 	return newAuditLogPagination(client, options...)
 }
 
-// ListAuditLogs fetches logs in a paginated fashion, see GetAuditLogsPaginated for usage.
-func (client *Client) ListAuditLogs(limit, latest, oldest int, action, actor, entity string) (entries []AuditEntry, err error) {
+// ListAuditLogs fetches logs in a paginated fashion,
+// see GetAuditLogsPaginated for usage.
+func (client *Client) ListAuditLogs(limit, latest, oldest int,
+	action, actor, entity string) (entries []AuditEntry, err error) {
 	opts := make([]AuditLogsOption, 0)
 	if limit != 0 {
 		opts = append(opts, AuditLogsOptionLimit(limit))
@@ -256,4 +291,179 @@ func (client *Client) ListAuditLogs(limit, latest, oldest int, action, actor, en
 		results = append(results, p.Entries...)
 	}
 	return results, p.Failure(err)
+}
+
+type auditSchemaResponseFull struct {
+	RawSchemas []json.RawMessage `json:"schemas"`
+}
+
+type rawSchema struct {
+	Type string `json:"type"`
+}
+
+type schemaEntity interface {
+	getEntityBytes() map[string]string
+}
+
+// AuditSchema defines a schema entity
+type AuditSchema struct {
+	Workspace  AuditDomain `json:"workspace"`
+	Enterprise AuditDomain `json:"enterprise"`
+	User       AuditUser   `json:"user"`
+	File       struct {
+		ID       string `json:"id"`
+		Name     string `json:"name"`
+		FileType string `json:"filetype"`
+		Title    string `json:"title"`
+	} `json:"file"`
+	Channel struct {
+		ID              string `json:"id"`
+		Name            string `json:"name"`
+		Privacy         string `json:"privacy"`
+		IsShared        string `json:"is_shared"`
+		IsOrgShared     string `json:"is_org_shared"`
+		TeamsSharedWith string `json:"teams_shared_with"`
+	} `json:"channel"`
+	App struct {
+		ID                  string `json:"id"`
+		Name                string `json:"name"`
+		IsDistributed       string `json:"is_distributed"`
+		IsDirectoryApproved string `json:"is_directory_approved"`
+		Scopes              string `json:"scopes"`
+	} `json:"app"`
+}
+
+var schemaMap = map[string]schemaEntity{
+	"workspace":  &AuditSchemaWorkspace{},
+	"enterprise": &AuditSchemaEnterprise{},
+	"user":       &AuditSchemaUser{},
+	"file":       &AuditSchemaFile{},
+	"channel":    &AuditSchemaChannel{},
+	"app":        &AuditSchemaApp{},
+}
+
+func (resp *auditSchemaResponseFull) parse(client *Client) ([]byte, error) {
+	rawSchema := make(map[string]map[string]string)
+
+	for idx := range resp.RawSchemas {
+		key, value := parseSchema([]byte(resp.RawSchemas[idx]), client.unmarshal)
+		if key != "" && value != nil {
+			rawSchema[key] = value
+		}
+	}
+	return client.marshal(rawSchema)
+}
+
+// parseSchema helps to parse a schema entity
+func parseSchema(raw []byte, unmarshal misc.SerialFunc) (string, map[string]string) {
+	schema := &rawSchema{}
+	err := unmarshal(raw, schema)
+	if err != nil {
+		return "", nil
+	}
+	if entity, ok := schemaMap[schema.Type]; ok {
+		err := unmarshal(raw, entity)
+		if err != nil {
+			return "", nil
+		}
+		return schema.Type, entity.getEntityBytes()
+	}
+	return "", nil
+}
+
+// AuditSchemaWorkspace defines a workspace schema
+type AuditSchemaWorkspace struct {
+	rawSchema
+	Entity map[string]string `json:"workspace"`
+}
+
+func (schema *AuditSchemaWorkspace) getEntityBytes() map[string]string {
+	return schema.Entity
+}
+
+// AuditSchemaEnterprise defines an enterprise schema
+type AuditSchemaEnterprise struct {
+	rawSchema
+	Entity map[string]string `json:"enterprise"`
+}
+
+func (schema *AuditSchemaEnterprise) getEntityBytes() map[string]string {
+	return schema.Entity
+}
+
+// AuditSchemaUser defines a user schema
+type AuditSchemaUser struct {
+	rawSchema
+	Entity map[string]string `json:"user"`
+}
+
+func (schema *AuditSchemaUser) getEntityBytes() map[string]string {
+	return schema.Entity
+}
+
+// AuditSchemaFile defines a file schema
+type AuditSchemaFile struct {
+	rawSchema
+	Entity map[string]string `json:"file"`
+}
+
+func (schema *AuditSchemaFile) getEntityBytes() map[string]string {
+	return schema.Entity
+}
+
+// AuditSchemaChannel defines a channel schema
+type AuditSchemaChannel struct {
+	rawSchema
+	Entity map[string]string `json:"channel"`
+}
+
+func (schema *AuditSchemaChannel) getEntityBytes() map[string]string {
+	return schema.Entity
+}
+
+// AuditSchemaApp defines an app schema
+type AuditSchemaApp struct {
+	rawSchema
+	Entity map[string]string `json:"app"`
+}
+
+func (schema *AuditSchemaApp) getEntityBytes() map[string]string {
+	return schema.Entity
+}
+
+// GetSchemas helps call /schemas endpoint
+func (client *Client) GetSchemas() (*AuditSchema, error) {
+	resp, err := auditSchemaRequest(
+		context.Background(), client, "schemas", client.token)
+	if err != nil {
+		return nil, err
+	}
+
+	jsonBytes, err := resp.parse(client)
+	if err != nil {
+		return nil, err
+	}
+	schema := &AuditSchema{}
+	err = client.unmarshal(jsonBytes, schema)
+	if err != nil {
+		return nil, err
+	}
+	return schema, nil
+}
+
+type auditActionResponseFull struct {
+	Actions AuditAction `json:"actions"`
+}
+
+// AuditAction defines a map of builtin actions
+type AuditAction map[string][]string
+
+// GetActions helps call /actions endpoint
+func (client *Client) GetActions() (AuditAction, error) {
+	resp, err := auditActionRequest(
+		context.Background(), client, "actions", client.token)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Actions, nil
 }

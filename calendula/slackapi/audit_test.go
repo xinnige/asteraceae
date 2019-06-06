@@ -25,6 +25,16 @@ func fakeAuditLogs() []byte {
 	return jsonBytes
 }
 
+func fakeAuditActions() []byte {
+	jsonBytes, _ := utils.ReadFile("../test/slack/auditactions.json")
+	return jsonBytes
+}
+
+func fakeAuditSchemas() []byte {
+	jsonBytes, _ := utils.ReadFile("../test/slack/auditschemas.json")
+	return jsonBytes
+}
+
 func fakeResponse(content []byte) *http.Response {
 	return &http.Response{
 		Body:       utils.ReadCloser{Reader: bytes.NewBuffer(content)},
@@ -35,10 +45,11 @@ func fakeResponse(content []byte) *http.Response {
 
 func fakeClient() *Client {
 	return &Client{
-		token:  "",
-		method: json.Unmarshal,
-		debug:  false,
-		log:    log.New(os.Stderr, "debug", log.LstdFlags|log.Lshortfile),
+		token:     "",
+		unmarshal: json.Unmarshal,
+		marshal:   json.Marshal,
+		debug:     false,
+		log:       log.New(os.Stderr, "debug", log.LstdFlags|log.Lshortfile),
 	}
 }
 
@@ -77,7 +88,41 @@ func TestListAuditLogs(t *testing.T) {
 		fakeResponse([]byte(fakeAuditLogs())), nil).Times(1)
 	client.client = mockClientiface
 
-	result, err := client.ListAuditLogs(10, 0, 1559626515, "", "", "")
+	result, err := client.ListAuditLogs(10, 1559636515, 1559626515,
+		"fake-action", "fake-actor", "fake-entity")
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(result))
+}
+
+func TestListAuditActions(t *testing.T) {
+	client := fakeClient()
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockClientiface := mock.NewMockAsterClient(mockCtrl)
+	mockClientiface.EXPECT().Do(gomock.Any()).Return(
+		fakeResponse([]byte(fakeAuditActions())), nil).Times(1)
+	client.client = mockClientiface
+
+	result, err := client.GetActions()
+	assert.Nil(t, err)
+	assert.Equal(t, 5, len(result["app"]))
+
+}
+
+func TestListAuditSchemas(t *testing.T) {
+	client := fakeClient()
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockClientiface := mock.NewMockAsterClient(mockCtrl)
+	mockClientiface.EXPECT().Do(gomock.Any()).Return(
+		fakeResponse([]byte(fakeAuditSchemas())), nil).Times(1)
+	client.client = mockClientiface
+
+	result, err := client.GetSchemas()
+	assert.Nil(t, err)
+	assert.Equal(t, "string", result.Workspace.ID)
+	assert.Equal(t, "array", result.App.Scopes)
+
 }

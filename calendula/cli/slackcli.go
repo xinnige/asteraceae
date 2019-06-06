@@ -6,6 +6,7 @@ import (
   "log"
 	"os"
 
+  misc "github.com/xinnige/asteraceae/calendula/astermisc"
 	"github.com/xinnige/asteraceae/calendula/slackapi"
 	"github.com/xinnige/asteraceae/calendula/utils"
 )
@@ -19,6 +20,8 @@ type SlackCLI struct {
 
 const (
 	cmdListLogs = "list-logs"
+	cmdGetActions = "get-actions"
+	cmdGetSchemas = "get-schemas"
 
   envAccessToken = "ACCESS_TOKEN"
   maxlimit = 9999
@@ -33,16 +36,26 @@ func NewSlackCLI() *SlackCLI {
 		token:  accessToken,
 	}
 }
+// SetLogger setup logger
+func (cli *SlackCLI) SetLogger(logger misc.Ilogger) {
+	if logger == nil {
+		return
+	}
+	cli.client.SetLogger(logger)
+}
 
 // Commands returns available commands
 func (cli *SlackCLI) Commands() map[string]func() {
 	mapper := map[string]func(){
 		cmdListLogs:   cli.methodListLogs,
+		cmdGetActions:   cli.methodGetActions,
+		cmdGetSchemas:   cli.methodGetSchemas,
 	}
 	return mapper
 }
 
 // methodListLogs returns a list of audit logs
+// use `| sed -n '3p' | jq '.[].action'` to format output
 func (cli *SlackCLI) methodListLogs() {
 	cmd := flag.NewFlagSet(cmdListLogs, cli.ErrorBehavior)
 	limit := cmd.Int("limit", maxlimit,
@@ -68,11 +81,49 @@ func (cli *SlackCLI) methodListLogs() {
     *limit, *latest, *oldest, *action, *actor, *entity)
 
   if err != nil {
-    log.Printf("MethodListLogs Error: %v", err)
+    log.Printf("ListLogs error: %v", err)
     fmt.Printf("Error: %v\n", err)
   }
   fmt.Printf("Found log entries %d\n", len(entries))
   fmt.Println("----------------------")
   jsonBytes := utils.Marshal(entries, &utils.JSONAPI{})
+  fmt.Printf("%s\n", jsonBytes)
+}
+
+func (cli *SlackCLI) methodGetActions(){
+	cmd := flag.NewFlagSet(cmdGetActions, cli.ErrorBehavior)
+
+	err := cmd.Parse(os.Args[2:])
+	if err != nil || !cmd.Parsed() {
+		fmt.Printf("Cannot parse arguments (%v)\n", err)
+		return
+	}
+
+  actions, err :=  cli.client.GetActions()
+  if err != nil {
+    log.Printf("GetActions error: %v", err)
+    fmt.Printf("Error: %v\n", err)
+  }
+
+  jsonBytes := utils.Marshal(actions, &utils.JSONAPI{})
+  fmt.Printf("%s\n", jsonBytes)
+}
+
+func (cli *SlackCLI) methodGetSchemas(){
+	cmd := flag.NewFlagSet(cmdGetActions, cli.ErrorBehavior)
+
+	err := cmd.Parse(os.Args[2:])
+	if err != nil || !cmd.Parsed() {
+		fmt.Printf("Cannot parse arguments (%v)\n", err)
+		return
+	}
+
+  schema, err :=  cli.client.GetSchemas()
+  if err != nil {
+    log.Printf("GetSchemas error: %v", err)
+    fmt.Printf("Error: %v\n", err)
+  }
+
+  jsonBytes := utils.Marshal(schema, &utils.JSONAPI{})
   fmt.Printf("%s\n", jsonBytes)
 }

@@ -8,6 +8,11 @@ import (
 	"os"
 
 	misc "github.com/xinnige/asteraceae/calendula/astermisc"
+	"github.com/xinnige/asteraceae/calendula/utils"
+)
+
+const (
+	envDebug = "DEBUG"
 )
 
 // ResponseMetadata holds pagination metadata
@@ -23,24 +28,36 @@ func (t *ResponseMetadata) initialize() *ResponseMetadata {
 	return &ResponseMetadata{}
 }
 
+type marshalFunc func(interface{}) ([]byte, error)
+
 // Client for the slack api.
 type Client struct {
-	token  string
-	client misc.AsterClient
-	debug  bool
-	log    misc.Ilogger
-	method misc.SerialFunc
+	token     string
+	client    misc.AsterClient
+	debug     bool
+	log       misc.Ilogger
+	unmarshal misc.SerialFunc
+	marshal   marshalFunc
 }
 
 // NewClient returns a pointer of slack api client
 func NewClient(accessToken string) *Client {
 	return &Client{
-		token:  accessToken,
-		method: json.Unmarshal,
-		client: &http.Client{},
-		debug:  false,
-		log:    log.New(os.Stderr, "asteraceae/slackapi", log.LstdFlags|log.Lshortfile),
+		token:     accessToken,
+		unmarshal: json.Unmarshal,
+		marshal:   json.Marshal,
+		client:    &http.Client{},
+		debug:     utils.GetEnv(envDebug, "false") == "true",
+		log:       log.New(os.Stderr, "slackapi", log.LstdFlags|log.Lshortfile),
 	}
+}
+
+// SetLogger setup logger
+func (api *Client) SetLogger(logger misc.Ilogger) {
+	if logger == nil {
+		return
+	}
+	api.log = logger
 }
 
 // Debugf print a formatted debug line.

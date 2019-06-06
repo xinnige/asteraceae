@@ -15,6 +15,7 @@ import (
 	"time"
 )
 
+// SerialFunc unmarshals bytes to interface{}
 type SerialFunc func([]byte, interface{}) error
 
 // AsterClient defines the minimal interface needed for an http.Client to be implemented.
@@ -49,7 +50,7 @@ func (e *RateLimitedError) Error() string {
 func doRequest(ctx context.Context, client AsterClient,
 	req *http.Request, intf interface{}, method SerialFunc, d debug) error {
 	req = req.WithContext(ctx)
-	// log.Printf("%+v", req)
+	logRequest(req, d)
 	resp, err := client.Do(req)
 
 	if err != nil {
@@ -98,6 +99,18 @@ func sendForm(ctx context.Context, client AsterClient, endpoint string, values u
 	return doRequest(ctx, client, req, intf, method, d)
 }
 
+func logRequest(req *http.Request, d debug) error {
+	if d.Debug() {
+		text, err := httputil.DumpRequest(req, true)
+		if err != nil {
+			return err
+		}
+		d.Debugln(string(text))
+	}
+
+	return nil
+}
+
 func logResponse(resp *http.Response, d debug) error {
 	if d.Debug() {
 		text, err := httputil.DumpResponse(resp, true)
@@ -130,7 +143,6 @@ func GetJSON(ctx context.Context, client AsterClient, endpoint, token string, va
 		log.Printf("Error: %v\n", err)
 		return err
 	}
-	// req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	req.Header.Set("Content-Type", "application/json")
 	req.URL.RawQuery = values.Encode()
