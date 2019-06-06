@@ -2,6 +2,7 @@ package auth0api
 
 import (
 	"errors"
+	// "fmt"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -61,3 +62,15 @@ func TestParseUser(t *testing.T) {
 	err = client.ParseUser([]byte(fakeUser()), user)
 	assert.NotNil(t, err)
 }
+
+// func TestParseUsers(t *testing.T) {
+// 	fakeUsers := ``
+//
+// 	client := &Auth0Client{
+// 		SerialAPI: &utils.JSONAPI{},
+// 	}
+// 	users := make([]User, 0)
+// 	err := client.ParseUsers([]byte(fakeUsers), &users)
+// 	fmt.Println(err)
+//
+// }

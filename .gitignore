@@ -39,3 +39,5 @@ go/*
 go.sum
 .python-version
 .env
+slackcli
+auth0cli

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -81,6 +82,7 @@ func PostJSON(ctx context.Context, client AsterClient, endpoint, token string, j
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	return doRequest(ctx, client, req, intf, method, d)
 }
@@ -125,6 +127,7 @@ func parseResponseBody(body io.ReadCloser, intf interface{}, method SerialFunc, 
 func GetJSON(ctx context.Context, client AsterClient, endpoint, token string, values url.Values, intf interface{}, method SerialFunc, d debug) error {
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
+		log.Printf("Error: %v\n", err)
 		return err
 	}
 	// req.Header.Set("Content-Type", "application/x-www-form-urlencoded")

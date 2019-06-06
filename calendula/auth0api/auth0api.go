@@ -16,7 +16,8 @@ const (
 	envConn     = "AUTH_CONNECTION"
 
 	deProvider = "ad"
-	deConn     = "ldap"
+	deConn     = "ldap01"
+	max        = 100
 )
 
 // Auth0Client defines the properties to access the auth endpoint
@@ -63,6 +64,20 @@ func (client *Auth0Client) GetUserByName(name string) (*User, error) {
 		return nil, err
 	}
 	return user, nil
+}
+
+// ListUsers fetches users in a paginated fashion, see GetUsersContext for usage.
+func (client *Auth0Client) ListUsers(start, size int) (results []User, err error) {
+	p := newUserPagination(start, size, client)
+	ctx := context.Background()
+
+	for ; !p.Done(); p, err = p.Next(ctx) {
+		if err != nil {
+			return results, err
+		}
+		results = append(results, p.Users...)
+	}
+	return results, err
 }
 
 // Debugf print a formatted debug line.

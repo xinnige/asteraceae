@@ -1,15 +1,18 @@
 PKG_NAME:=.
 PKG_DIR:=$(PKG_NAME)
 
-CLI_NAME:=auth0cli
+AUTH0CLI_NAME:=auth0cli
+SLACKCLI_NAME:=slackcli
 
-CLI_SRCS:= $(wildcard $(PKG_DIR)/awsapi/*.go) $(wildcard $(PKG_DIR)/mock/*.go) $(wildcard $(PKG_DIR)/api/*.go)
+AUTH0CLI_SRCS:= $(wildcard $(PKG_DIR)/awsapi/*.go) $(wildcard $(PKG_DIR)/mock/*.go) $(wildcard $(PKG_DIR)/astermisc/*.go)
+SLACKCLI_SRCS:= $(wildcard $(PKG_DIR)/slackapi/*.go) $(wildcard $(PKG_DIR)/mock/*.go) $(wildcard $(PKG_DIR)/astermisc/*.go)
 
 PWD = $(shell pwd)
 NAME:= $(notdir $(PWD))
 # ENV?= dev
 
-AUTH0_CLI_BIN:=./$(CLI_NAME)
+AUTH0_CLI_BIN:=./$(AUTH0CLI_NAME)
+SLACK_CLI_BIN:=./$(SLACKCLI_NAME)
 
 .PHONY: setup
 setup:
@@ -45,14 +48,18 @@ cover:
 	find . -name coverage.xml|xargs -n1 sed -i -e 's#/go/src#./#g'
 
 .PHONY: build
-build: $(AUTH0_CLI_BIN)
+build: $(AUTH0_CLI_BIN) $(SLACK_CLI_BIN)
 
-$(AUTH0_CLI_BIN): $(CLI_SRCS)
-	go build -o $(AUTH0_CLI_BIN) $(PKG_DIR)/cmd/$(CLI_NAME)/main.go
+$(AUTH0_CLI_BIN): $(AUTH0CLI_SRCS)
+	go build -o $(AUTH0_CLI_BIN) $(PKG_DIR)/cmd/$(AUTH0CLI_NAME)/main.go
+
+$(SLACK_CLI_BIN): $(SLACKCLI_SRCS)
+	go build -o $(SLACK_CLI_BIN) $(PKG_DIR)/cmd/$(SLACKCLI_NAME)/main.go
+
 
 .PHONY: clean
 clean:
 	find . -name debug.test | xargs rm -f
 	find . -name "coverage*" | xargs rm -f
 	find . -name "*.xml" | xargs rm -f
-	rm -f $(AUTH0_CLI_BIN) cli.log
+	rm -f $(AUTH0_CLI_BIN) $(SLACK_CLI_BIN) cli.log
